@@ -7,6 +7,7 @@ Created on May 11, 2018
 import sys
 from argparse import ArgumentParser
 
+
 #===============================================================================
 # Utility Funcions
 #===============================================================================
@@ -25,7 +26,7 @@ def parse_nodes():
     return nodes
 
 
-def execute_command(command_closure, nodes):
+def execute(command_closure, nodes):
     '''
     This function applies the nodes argument to the command_closure if all is well otherwise
     it displays an error message.
@@ -48,6 +49,10 @@ def command_init(nodes):
 def command_install(nodes):
     #TODO: implement
     sys.stdout.write('install command\n')
+
+def command_ping(nodes):
+    #TODO: implement
+    sys.stdout.write('ping command\n')
 
 def command_start(nodes):
     #TODO: implement
@@ -84,6 +89,7 @@ if __name__ == '__main__':
     parser = ArgumentParser(description='Galera Cluster Admin Tool', epilog=epilog_message)
 
     parser.add_argument('--init', action='store_true', help='Creates a default config file named "cluster.config"')
+    parser.add_argument('--ping', action='store_true', help='Makes sure that all nodes are reachable by pinging them')
     parser.add_argument('--install', action='store_true', help='Installs Galera cluster on the nodes specified in the config file')
     parser.add_argument('--start', action='store_true', help='Starts the cluster')
     parser.add_argument('--stop', action='store_true', help='Stops the cluster')
@@ -94,27 +100,30 @@ if __name__ == '__main__':
     
     if args.init:
         nodes = parse_nodes()
-        execute_command(command_init, nodes)
+        execute(command_init, nodes)
+    elif args.ping:
+        nodes = parse_nodes()
+        execute(command_ping, nodes)
     elif args.install:
         nodes = parse_nodes()
-        execute_command(command_install, nodes)
+        execute(command_install, nodes)
     elif args.start:
         nodes = parse_nodes()
-        execute_command(command_start, nodes)
+        execute(command_start, nodes)
     elif args.stop:
         nodes = parse_nodes()
-        execute_command(command_stop, nodes)
+        execute(command_stop, nodes)
     elif args.status:
         nodes = parse_nodes()
-        execute_command(command_status, nodes)
+        execute(command_status, nodes)
     elif args.server:
         nodes = parse_nodes()
-        execute_command(command_server, nodes)
+        execute(command_server, nodes)
     else:
         parser.print_help(sys.stdout)
     
     #TODO: replace all print statements with sys.stdout.write
-    #TODO: add a readme.md file to git repository
+    #TODO: show main help message in readme.md with some salt and pepper 
     
     
     
