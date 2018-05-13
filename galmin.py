@@ -7,6 +7,8 @@ Created on May 11, 2018
 import os
 import sys
 from argparse import ArgumentParser
+from multiprocessing.pool import ThreadPool
+
 
 CONFIG_PATH = './cluster.config'
 
@@ -55,6 +57,19 @@ def execute(command_closure, nodes):
         command_closure(nodes)
 
 
+def execute_parrallel(function, args_list):
+    '''
+    Executes the input function in parrallel using a thread pool object using the fiven args_list,
+    a list of results is returned
+    '''
+    async_results = []
+    for args in args_list:
+        pool = ThreadPool(processes=1)
+        async_results.append(pool.apply_async(function, args))
+    results = [r.get() for r in async_results]
+    return results
+
+
 #===============================================================================
 # Command Functions
 #===============================================================================
@@ -84,25 +99,41 @@ def command_init():
         sys.stdout.write('[an optional trailing empty line]\n')
         sys.stdout.write('\n')
 
+
 def command_ping(nodes):
-    #TODO: implement
-    sys.stdout.write('ping command\n')
+    def ping_node(ip, label):
+        sys.stdout.write('pinging "%s" (%s) ...\n' % (label, ip))
+        response = True
+        #TODO: implement
+        import time
+        time.sleep(1)
+        message = '"%s" (%s) is up\n' if response else '"%s" (%s) is down!\n'
+        result = message % (label, ip)
+        return result
+    args_list = [(node['ip'], node['label']) for node in nodes]
+    results = execute_parrallel(ping_node, args_list)
+    sys.stdout.writelines(results)
+    
 
 def command_install(nodes):
     #TODO: implement
     sys.stdout.write('install command\n')
 
+
 def command_start(nodes):
     #TODO: implement
     sys.stdout.write('start command\n')
+
 
 def command_stop(nodes):
     #TODO: implement
     sys.stdout.write('stop command\n')
 
+
 def command_status(nodes):
     #TODO: implement
     sys.stdout.write('status command\n')
+
 
 def command_server(nodes):
     #TODO: implement
