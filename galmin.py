@@ -4,8 +4,11 @@ Created on May 11, 2018
 @author: rabihkodeih
 '''
 
+import os
 import sys
 from argparse import ArgumentParser
+
+CONFIG_PATH = './cluster.config'
 
 
 #===============================================================================
@@ -20,9 +23,23 @@ def parse_nodes():
     * A list of node objects if the config file is OK
     * None if the config file is incorrectly configured or is missing
     '''
-    #TODO: in each mode except the config mode, check if cluster.config exists in the same directory
-    # and make sure it has the appropriate format, in case of error, show the exact error and display the same help as in the config mode
-    nodes = [{}, {}, {}]
+    nodes = None
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH) as config:
+            lines = [''.join(line.splitlines()) for line in config.readlines()]
+            lines = [line for line in lines if line]
+            sections = [lines[4*i:4*(i + 1)] for i in range(len(lines)//4)]
+            legal_keys = set(['label', 'ip', 'login', 'password'])
+            nodes = []
+            for section in sections:
+                node = {}
+                for config_line in section:
+                    key, value = [data.strip() for data in config_line.split(':')]
+                    node[key] =  value
+                if set(node.keys()) != legal_keys:
+                    nodes = None
+                    break
+                nodes.append(node)
     return nodes
 
 
@@ -42,17 +59,38 @@ def execute(command_closure, nodes):
 # Command Functions
 #===============================================================================
 
-def command_init(nodes):
-    #TODO: implement
-    sys.stdout.write('init command\n')
-
-def command_install(nodes):
-    #TODO: implement
-    sys.stdout.write('install command\n')
+def command_init():
+    sys.stdout.write('\ncreating file "%s"...\n' % CONFIG_PATH)
+    if os.path.exists(CONFIG_PATH):
+        sys.stdout.write('Could not create file, "%s" already exists, please delete it and run this command again.' % CONFIG_PATH)
+        sys.stdout.write('\n')
+    else:
+        with open(CONFIG_PATH, 'w') as config:
+            for node_number in range(1, 4):
+                config.write('label:cluster_node_%s\n' % node_number);
+                config.write('ip:127.0.0.1\n');
+                config.write('login:root\n');
+                config.write('password:1234\n');
+                config.write('\n');
+        sys.stdout.write('\nDone, the file has three nodes configured to default values.\n')
+        sys.stdout.write('Please make sure to edit this file and enter the correct\n')
+        sys.stdout.write('ips and ssh login credentials for the cluster nodes.\n')
+        sys.stdout.write('Add more nodes as desired using the following format:\n')
+        sys.stdout.write('\n')
+        sys.stdout.write('label: [cluster node label]\n')
+        sys.stdout.write('ip: [cluster node static ip]\n')
+        sys.stdout.write('login: [login account user name used in ssh connections]\n')
+        sys.stdout.write('password: [password of the login account]\n')
+        sys.stdout.write('[an optional trailing empty line]\n')
+        sys.stdout.write('\n')
 
 def command_ping(nodes):
     #TODO: implement
     sys.stdout.write('ping command\n')
+
+def command_install(nodes):
+    #TODO: implement
+    sys.stdout.write('install command\n')
 
 def command_start(nodes):
     #TODO: implement
@@ -100,7 +138,7 @@ if __name__ == '__main__':
     
     if args.init:
         nodes = parse_nodes()
-        execute(command_init, nodes)
+        command_init()
     elif args.ping:
         nodes = parse_nodes()
         execute(command_ping, nodes)
@@ -122,12 +160,18 @@ if __name__ == '__main__':
     else:
         parser.print_help(sys.stdout)
     
+    
+    
     #TODO: replace all print statements with sys.stdout.write
     #TODO: show main help message in readme.md with some salt and pepper 
+    #TODO: connect to nodes using ssh keys instead of username logins
     
     
     
-    
+    # VM Credentials:
+    # ubuntu1: rabih (Abcd1234)
+    # ubuntu2: rabih (Abcd1234)
+    # ubuntu3: rabih (Abcd1234)
     
     
     
