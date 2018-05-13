@@ -6,8 +6,10 @@ Created on May 11, 2018
 
 import os
 import sys
+import traceback
 from argparse import ArgumentParser
 from multiprocessing.pool import ThreadPool
+import paramiko
 
 
 CONFIG_PATH = './cluster.config'
@@ -70,6 +72,37 @@ def execute_parrallel(function, args_list):
     return results
 
 
+def parse_node(node):
+    '''
+    Utility function to parse a node object,
+    returns: label, ip, login, password
+    '''
+    label, ip, login, password = node['label'], node['ip'], node['login'], node['password']
+    return label, ip, login, password
+
+
+def ssh_run(host, login, password, commands):
+    #TODO: add docstring
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        client.connect(hostname=host, username=login, password=password)
+        for command in commands:
+            stdin, stdout, stderr = client.exec_command(command)  # @UnusedVariable
+            result = stdout.read().decode("utf-8")
+            error = stderr.read().decode("utf-8")
+            if result:
+                sys.stdout.write(result + '\n')
+            if error:
+                sys.stderr.write(error + '\n')
+    except:
+        sys.stdout.write('Failed to establish ssh connection to host "%s"\n' % host)
+        sys.stdout.write('due to the following exception:\n')
+        traceback.print_exc(file=sys.stdout)
+    finally:
+        client.close()
+        
+
 #===============================================================================
 # Command Functions
 #===============================================================================
@@ -103,22 +136,14 @@ def command_init():
 def command_ping(nodes):
     def ping_node(ip, label):
         sys.stdout.write('pinging "%s" (%s) ...\n' % (label, ip))
-        response = True
-        #TODO: implement
-        import time
-        time.sleep(1)
-        message = '"%s" (%s) is up\n' if response else '"%s" (%s) is down!\n'
+        response = os.system("ping -c 1 %s" % ip)
+        message = '"%s" (%s) is up\n' if response==0 else '"%s" (%s) is down!\n'
         result = message % (label, ip)
         return result
     args_list = [(node['ip'], node['label']) for node in nodes]
     results = execute_parrallel(ping_node, args_list)
     sys.stdout.writelines(results)
     
-
-def command_install(nodes):
-    #TODO: implement
-    sys.stdout.write('install command\n')
-
 
 def command_start(nodes):
     #TODO: implement
@@ -130,9 +155,32 @@ def command_stop(nodes):
     sys.stdout.write('stop command\n')
 
 
-def command_status(nodes):
+def command_install(nodes):
     #TODO: implement
-    sys.stdout.write('status command\n')
+    
+    for node in nodes:
+        label, ip, login, password = parse_node(node)
+        commands = ['pwd',
+                    'ls',
+                    'ping -c 1 www.google.com',
+                    ]
+        ssh_run(ip, login, password, commands)
+        return
+    
+    sys.stdout.write('install command\n')
+
+
+def command_status(nodes):
+    sys.stdout.write('\n')
+    for ith, node in enumerate(nodes):
+        header = 'Node %s' % (ith + 1)
+        sys.stdout.write('%s\n' % header)
+        sys.stdout.write('%s\n' % ('-'*len(header)))
+        sys.stdout.write('  label: %s\n' % node['label'])
+        sys.stdout.write('     ip: %s\n' % node['ip'])
+        sys.stdout.write(' galera: %s\n' % 'installed') #TODO: implement
+        sys.stdout.write(' deamon: %s\n' % 'stopped') #TODO: implement
+        sys.stdout.write('\n')
 
 
 def command_server(nodes):
