@@ -2,8 +2,8 @@
 
 # Galera Cluster Command Line Tool
 
-    usage: galmin.py \[-h\] \[--init\] \[--ping\] \[--install\] \[--start\] \[--stop\]
-                     \[--status\] \[--server\]
+    usage: galmin.py [-h] [--init] [--ping] [--install] [--start] [--stop]
+                     [--status] [--server]
 
     Galera Cluster Admin Tool
 
