@@ -88,7 +88,11 @@ def ssh_run(host, login, password, commands):
     try:
         client.connect(hostname=host, username=login, password=password)
         for command in commands:
+            sys.stdout.write('\n* %s >> %s\n' % (host, command))
             stdin, stdout, stderr = client.exec_command(command)  # @UnusedVariable
+            if command.startswith('sudo'):
+                stdin.write('%s\n' % password)
+                stdin.flush()
             result = stdout.read().decode("utf-8")
             error = stderr.read().decode("utf-8")
             if result:
@@ -157,13 +161,46 @@ def command_stop(nodes):
 
 def command_install(nodes):
     #TODO: implement
+
+    # sudo -S remove selinux
+    # sudo -S ln -s /etc/apparmor.d/usr /etc/apparmor.d/disable/.sbin.mysqld
+    # sudo -S service apparmor restart
+    
+    # sudo -S apt-get -y install git
+    # sudo -S apt-get -y install scons
+    # sudo -S apt-get -y install libboost-dev
+    # sudo -S apt-get -y install libboost-program-options-dev 
+    # sudo -S apt-get -y install libasio-dev
+    # sudo -S apt-get -y install check
+    
+    # sudo -S apt-get -y build-dep mysql-server
+    # git clone https://github.com/codership/mysql-wsrep -b 5.6 --depth=1
+    # cd ~/mysql-wsrep; git checkout 5.6
+    # git clone https://github.com/codership/galera.git --depth=1
+    # cd ~/mysql-wsrep; cmake -DWITH_WSREP=ON -DWITH_INNODB_DISALLOW_WRITES=ON ./
+    # cd ~/mysql-wsrep; make
+    # sudo -S ls; cd ~/mysql-wsrep; sudo make install
+    # sudo -S ls; cd ~/galera; sudo scons
+    
+    # sudo -S groupadd mysql
+    # sudo -S useradd -g mysql mysql
+    # sudo -S ls; cd /usr/local/mysql; sudo ./scripts/mysql_install_db --user=mysql
+    # sudo -S chown -R mysql /usr/local/mysql
+    # sudo -S chgrp -R mysql /usr/local/mysql
+    # sudo -S cp /usr/local/mysql/supported-files/mysql.server /etc/init.d/mysql
+    # sudo -S chmod +x /etc/init.d/mysql
+    # sudo -S update-rc.d mysql defaults
+    
+    # sudo -S aptget install mysql-client
+    
+    # change basedir to /usr/local/ in /etc/init.d/mysql file
+    
+    
     
     for node in nodes:
         label, ip, login, password = parse_node(node)
-        commands = ['pwd',
-                    'ls',
-                    'ping -c 1 www.google.com',
-                    ]
+        #commands = ['sudo -S ls; cd ~/mysql-wsrep; sudo make install',]
+        commands = ['pwd']
         ssh_run(ip, login, password, commands)
         return
     
@@ -240,6 +277,11 @@ if __name__ == '__main__':
         parser.print_help(sys.stdout)
     
     
+    
+    #TODO: add to documentation that :
+        #  servers used for the test are ubuntu desktops 14.04
+        #  git installed
+        #  policycoreutils installed
     
     #TODO: replace all print statements with sys.stdout.write
     #TODO: show main help message in readme.md with some salt and pepper 
