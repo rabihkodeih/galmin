@@ -162,47 +162,48 @@ def command_stop(nodes):
 def command_install(nodes):
     #TODO: implement
 
-    # sudo -S remove selinux
-    # sudo -S ln -s /etc/apparmor.d/usr /etc/apparmor.d/disable/.sbin.mysqld
-    # sudo -S service apparmor restart
-    
-    # sudo -S apt-get -y install git
-    # sudo -S apt-get -y install scons
-    # sudo -S apt-get -y install libboost-dev
-    # sudo -S apt-get -y install libboost-program-options-dev 
-    # sudo -S apt-get -y install libasio-dev
-    # sudo -S apt-get -y install check
-    
-    # sudo -S apt-get -y build-dep mysql-server
-    # git clone https://github.com/codership/mysql-wsrep -b 5.6 --depth=1
-    # cd ~/mysql-wsrep; git checkout 5.6
-    # git clone https://github.com/codership/galera.git --depth=1
-    # cd ~/mysql-wsrep; cmake -DWITH_WSREP=ON -DWITH_INNODB_DISALLOW_WRITES=ON ./
-    # cd ~/mysql-wsrep; make
-    # sudo -S ls; cd ~/mysql-wsrep; sudo make install
-    # sudo -S ls; cd ~/galera; sudo scons
-    
-    # sudo -S groupadd mysql
-    # sudo -S useradd -g mysql mysql
-    # sudo -S ls; cd /usr/local/mysql; sudo ./scripts/mysql_install_db --user=mysql
-    # sudo -S chown -R mysql /usr/local/mysql
-    # sudo -S chgrp -R mysql /usr/local/mysql
-    # sudo -S cp /usr/local/mysql/supported-files/mysql.server /etc/init.d/mysql
-    # sudo -S chmod +x /etc/init.d/mysql
-    # sudo -S update-rc.d mysql defaults
-    
-    # sudo -S aptget install mysql-client
+    installation_commands = [
+    'sudo -S remove selinux',
+    'sudo -S ln -s /etc/apparmor.d/usr /etc/apparmor.d/disable/.sbin.mysqld',
+    'sudo -S service apparmor restart',
+      
+    'sudo -S apt-get -y install git',
+    'sudo -S apt-get -y install scons',
+    'sudo -S apt-get -y install libboost-dev',
+    'sudo -S apt-get -y install libboost-program-options-dev', 
+    'sudo -S apt-get -y install libasio-dev',
+    'sudo -S apt-get -y install check',
+      
+    'sudo -S apt-get -y build-dep mysql-server',
+    'git clone https://github.com/codership/mysql-wsrep -b 5.6 --depth=1',
+    'cd ~/mysql-wsrep; git checkout 5.6',
+    'git clone https://github.com/codership/galera.git --depth=1',
+    'cd ~/mysql-wsrep; cmake -DWITH_WSREP=ON -DWITH_INNODB_DISALLOW_WRITES=ON ./',
+    'cd ~/mysql-wsrep; make',
+    'sudo -S ls; cd ~/mysql-wsrep; sudo make install',
+    'sudo -S ls; cd ~/galera; sudo scons',
+      
+    'sudo -S groupadd mysql',
+    'sudo -S useradd -g mysql mysql',
+    'sudo -S ls; cd /usr/local/mysql; sudo ./scripts/mysql_install_db --user=mysql',
+    'sudo -S chown -R mysql /usr/local/mysql',
+    'sudo -S chgrp -R mysql /usr/local/mysql',
+    'sudo -S cp /usr/local/mysql/supported-files/mysql.server /etc/init.d/mysql',
+    'sudo -S chmod +x /etc/init.d/mysql',
+    'sudo -S update-rc.d mysql defaults',
+      
+    'sudo -S aptget install mysql-client',
     
     # change basedir to /usr/local/ in /etc/init.d/mysql file
-    
+    ]
     
     
     for node in nodes:
         label, ip, login, password = parse_node(node)
         #commands = ['sudo -S ls; cd ~/mysql-wsrep; sudo make install',]
-        commands = ['pwd']
+        commands = installation_commands
         ssh_run(ip, login, password, commands)
-        return
+        #return
     
     sys.stdout.write('install command\n')
 
