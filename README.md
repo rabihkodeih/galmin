@@ -4,8 +4,8 @@
 
 ## Dependencies
 
-1. [python3] (https://www.python.org/downloads/release/python-364/)
-2. [paramiko] (http://www.paramiko.org/installing.html)
+1. [python3](https://www.python.org/downloads/release/python-364/)
+2. [paramiko](http://www.paramiko.org/installing.html)
 
 ## Installation:
 First, visit the websites of the dependencies and install as instructed. Then download the script **galmin.py** to any directory 
