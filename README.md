@@ -41,7 +41,7 @@ When you first type **galmin** you will get the following help screen:
     use the "--init" command to create a default config file named
     "cluster.config" then edit it to specify your cluster nodes. Once a cluster
     has been installed, run the "--bootstrap" command to mark the first cluster
-    node as safe to bootstrap and cluster from. After starting the cluster, use
+    node as safe to start the cluster from. After starting the cluster, use
     the command "--server" to start a local monitoring server on
     "http://localhost:8080" which can then be stopped using Ctrl-C.
 
@@ -69,7 +69,7 @@ and you will get the following:
     
 As instructed, edit the file "cluster.config" and enter the values as necessary.
 
-After than make sure that the cluster servers are all up by typing:
+After that make sure that the cluster servers are all up by typing:
 
     galmin --ping
     
@@ -81,6 +81,9 @@ and if all is OK, you should see something like:
     "cluster_node_1" (127.0.0.1) is up
     "cluster_node_2" (127.0.0.1) is up
     "cluster_node_3" (127.0.0.1) is up
+
+you may want at this stage to ping each node from each other node and from the machine
+you have installed the management tool.
 
 Now we are ready to start the installation process.
 

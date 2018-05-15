@@ -349,7 +349,7 @@ if __name__ == '__main__':
     Welcome to the Galera cluster admin command line tool. Before using this tool, use the "--init" command 
     to create a default config file named "cluster.config" then edit it to specify your cluster nodes.
     Once a cluster has been installed, run the "--bootstrap" command to mark the first cluster node as safe
-    to bootstrap and cluster from. After starting the cluster, use the command "--server" to
+    to start the cluster from. After starting the cluster, use the command "--server" to
     start a local monitoring server on "http://localhost:8080" which can then be stopped using Ctrl-C.
     '''
     parser = ArgumentParser(description='Galera Cluster Admin Tool', epilog=epilog_message)
