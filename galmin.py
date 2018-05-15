@@ -82,7 +82,9 @@ def parse_node(node):
 
 
 def ssh_run(host, login, password, commands):
-    #TODO: add docstring
+    '''
+    Runs a list of commands through an ssh connection to the given host using the supplied login and password
+    '''
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
@@ -93,6 +95,8 @@ def ssh_run(host, login, password, commands):
             if command.startswith('sudo'):
                 stdin.write('%s\n' % password)
                 stdin.flush()
+            #for some weird reason trying to read the output buffer hangs on "ufw enable" command
+            if command == 'sudo -S ufw enable': continue 
             result = stdout.read().decode("utf-8")
             error = stderr.read().decode("utf-8")
             if result:
@@ -105,7 +109,36 @@ def ssh_run(host, login, password, commands):
         traceback.print_exc(file=sys.stdout)
     finally:
         client.close()
-        
+   
+   
+def get_galera_cnf_content(node_ip, node_name, cluster_ips):
+    template = '''
+    [mysqld]
+    binlog_format=ROW
+    default-storage-engine=innodb
+    innodb_autoinc_lock_mode=2
+    bind-address=0.0.0.0
+    
+    # Galera Provider Configuration
+    wsrep_on=ON
+    wsrep_provider=/usr/lib/galera/libgalera_smm.so
+    
+    # Galera Cluster Configuration
+    wsrep_cluster_name="galera_cluster"
+    wsrep_cluster_address="gcomm://%CLUSTER_IPS%"
+    
+    # Galera Synchronization Configuration
+    wsrep_sst_method=rsync
+    
+    # Galera Node Configuration
+    wsrep_node_address="%NODE_IP%"
+    wsrep_node_name="%NODE_NAME%"
+    '''
+    template = template.replace('%CLUSTER_IPS%', ','.join(cluster_ips))
+    template = template.replace('%NODE_IP%', node_ip)
+    template = template.replace('%NODE_NAME%', node_name)
+    content = '\n'.join(line.strip() for line in template.splitlines())
+    return content     
 
 #===============================================================================
 # Command Functions
@@ -160,52 +193,31 @@ def command_stop(nodes):
 
 
 def command_install(nodes):
-    #TODO: implement
-
-    installation_commands = [
-    'sudo -S remove selinux',
-    'sudo -S ln -s /etc/apparmor.d/usr /etc/apparmor.d/disable/.sbin.mysqld',
-    'sudo -S service apparmor restart',
-      
-    'sudo -S apt-get -y install git',
-    'sudo -S apt-get -y install scons',
-    'sudo -S apt-get -y install libboost-dev',
-    'sudo -S apt-get -y install libboost-program-options-dev', 
-    'sudo -S apt-get -y install libasio-dev',
-    'sudo -S apt-get -y install check',
-      
-    'sudo -S apt-get -y build-dep mysql-server',
-    'git clone https://github.com/codership/mysql-wsrep -b 5.6 --depth=1',
-    'cd ~/mysql-wsrep; git checkout 5.6',
-    'git clone https://github.com/codership/galera.git --depth=1',
-    'cd ~/mysql-wsrep; cmake -DWITH_WSREP=ON -DWITH_INNODB_DISALLOW_WRITES=ON ./',
-    'cd ~/mysql-wsrep; make',
-    'sudo -S ls; cd ~/mysql-wsrep; sudo make install',
-    'sudo -S ls; cd ~/galera; sudo scons',
-      
-    'sudo -S groupadd mysql',
-    'sudo -S useradd -g mysql mysql',
-    'sudo -S ls; cd /usr/local/mysql; sudo ./scripts/mysql_install_db --user=mysql',
-    'sudo -S chown -R mysql /usr/local/mysql',
-    'sudo -S chgrp -R mysql /usr/local/mysql',
-    'sudo -S cp /usr/local/mysql/supported-files/mysql.server /etc/init.d/mysql',
-    'sudo -S chmod +x /etc/init.d/mysql',
-    'sudo -S update-rc.d mysql defaults',
-      
-    'sudo -S aptget install mysql-client',
-    
-    # change basedir to /usr/local/ in /etc/init.d/mysql file
-    ]
-    
-    
-    for node in nodes:
+    cluster_ips = [node['ip'] for node in nodes]
+    def install_cluster_node(node):
+        sys.stdout.write('trying to ssh to %s\n' % str(node['ip']))
         label, ip, login, password = parse_node(node)
-        #commands = ['sudo -S ls; cd ~/mysql-wsrep; sudo make install',]
-        commands = installation_commands
+        config_file_content = get_galera_cnf_content(ip, label, cluster_ips)
+        commands = [
+            'sudo -S apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8',
+            "sudo -S add-apt-repository 'deb [arch=amd64,i386,ppc64el] http://ftp.utexas.edu/mariadb/repo/10.1/ubuntu xenial main'",
+            'sudo -S apt update -y',
+            "sudo -S sh -c 'apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server rsync'",
+            'sudo -S echo \'%s\' > ~/galera.tmp' % config_file_content,
+            'sudo -S mv galera.tmp /etc/mysql/conf.d/galera.cnf',
+            'sudo -S ufw enable',
+            'sudo -S ufw allow ssh',
+            'sudo -S ufw allow 3306/tcp',
+            'sudo -S ufw allow 4444/tcp',
+            'sudo -S ufw allow 4567/tcp',
+            'sudo -S ufw allow 4568/tcp',
+            'sudo -S ufw allow 4567/udp',
+            'sudo -S systemctl stop mysql'
+        ]
         ssh_run(ip, login, password, commands)
-        #return
-    
-    sys.stdout.write('install command\n')
+        return 0
+    args_list = [(node, ) for node in nodes]
+    execute_parrallel(install_cluster_node, args_list)
 
 
 def command_status(nodes):
@@ -289,7 +301,6 @@ if __name__ == '__main__':
     #TODO: connect to nodes using ssh keys instead of username logins
     
     
-    
     # VM Credentials:
     # ubuntu1: rabih (Abcd1234)
     # ubuntu2: rabih (Abcd1234)
@@ -298,12 +309,19 @@ if __name__ == '__main__':
     
     
     
+    # manual installation MariaDB/Galera cluster on Ubuntu 14.04
     
+    # pre-conditions:
+    #    ubuntu server 16.04 with openssh-server installed and a static ip address assigned
+    # >> sudo apt-get update -y
+    # >> sudo apt-get upgrade -y
+    # >> reboot
     
+    # >> 
     
-    
-    
-    
+    #...
+    # sudo sh -c 'apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server'
+    #...
     
     
     
