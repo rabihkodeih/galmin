@@ -314,14 +314,7 @@ def command_server(nodes):
     sys.stdout.write('server command\n')
 
 
-if __name__ == '__main__':
-    
-#     Write a Golang server program that
-#     - installs a 3-node MySQL/Galera cluster in an environment of your choice: AWS, Docker, VMs, single host, etc.
-#     - starts the cluster up
-#     - waits for HTTP client connections
-#     - displays a list of running nodes on the home page.
-    
+if __name__ == '__main__':    
 
     epilog_message = '''
     Welcome to the Galera cluster admin command line tool. Before using this tool, use the "--init" command 
@@ -371,41 +364,7 @@ if __name__ == '__main__':
         parser.print_help(sys.stdout)
     
     
-    #TODO: add db user name and password in each node (currently set to root/"" by default isntallation process)
-    
-    #TODO: add to documentation that :
-        #  servers used for the test are ubuntu desktops 14.04
-        #  git installed
-        #  policycoreutils installed
-    
-    #TODO: replace all print statements with sys.stdout.write
-    #TODO: show main help message in readme.md with some salt and pepper 
-    #TODO: connect to nodes using ssh keys instead of username logins
-    
-    
-    # VM Credentials:
-    # ubuntu1: rabih (Abcd1234)
-    # ubuntu2: rabih (Abcd1234)
-    # ubuntu3: rabih (Abcd1234)
-    
-    
-    
-    
-    # manual installation MariaDB/Galera cluster on Ubuntu 14.04
-    
-    # pre-conditions:
-    #    ubuntu server 16.04 with openssh-server installed and a static ip address assigned
-    # >> sudo apt-get update -y
-    # >> sudo apt-get upgrade -y
-    # >> reboot
-    
-    # >> 
-    
-    #...
-    # sudo sh -c 'apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server'
-    #...
-    
-    
+    #TODO: update readme.md  
     
     
     
