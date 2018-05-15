@@ -9,6 +9,7 @@ import sys
 import traceback
 from argparse import ArgumentParser
 from multiprocessing.pool import ThreadPool
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import paramiko
 
 
@@ -310,8 +311,36 @@ def command_bootstrap(nodes):
     
 
 def command_server(nodes):
-    #TODO: implement
-    sys.stdout.write('server command\n')
+    def get_html_content():
+        args_list = [(node, ) for node in nodes]
+        installations = dict(execute_parrallel(check_installation, args_list))
+        deamons = dict(execute_parrallel(check_deamon, args_list))
+        html_content = '<html lang="en"><head><meta charset="utf-8"><title>Galera Clusger Monitor</title></head>'
+        html_content += '<body><table border="1">'
+        html_content += '<tr><td>Node Label</td><td>Node IP</td><td>Galera</td><td>Deamon</td></tr>'
+        for node in nodes:
+            html_content += '<tr>'
+            html_content += '<td>%s</td>' % node['label']
+            html_content += '<td>%s</td>' % node['ip']
+            html_content += '<td>%s</td>' % ('installed' if installations[node['ip']] else 'not installed') 
+            html_content += '<td>%s</td>' % ('started' if deamons[node['ip']] else 'stopped')
+            html_content += '</tr>'
+        html_content += '</table>'
+        html_content += '<p>Cluster Size : %s</p>' % get_cluster_size(nodes[0])
+        html_content += '</body></html>'
+        return html_content
+    class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-type','text/html')
+            self.end_headers()
+            content = get_html_content()
+            self.wfile.write(bytes(content, "utf8"))
+    sys.stdout.write('starting local monitoring server on "http://localhost:8080"...\n')
+    server_address = ('127.0.0.1', 8080)
+    httpd = HTTPServer(server_address, testHTTPServer_RequestHandler)
+    httpd.serve_forever()
+    
 
 
 if __name__ == '__main__':    
@@ -364,7 +393,6 @@ if __name__ == '__main__':
         parser.print_help(sys.stdout)
     
     
-    #TODO: update readme.md  
     
     
     
