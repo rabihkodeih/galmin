@@ -81,16 +81,17 @@ def parse_node(node):
     return label, ip, login, password
 
 
-def ssh_run(host, login, password, commands):
+def ssh_run(host, login, password, commands, verbose=True):
     '''
     Runs a list of commands through an ssh connection to the given host using the supplied login and password
     '''
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    result = None
     try:
         client.connect(hostname=host, username=login, password=password)
         for command in commands:
-            sys.stdout.write('\n* %s >> %s\n' % (host, command))
+            if verbose: sys.stdout.write('\n* %s >> %s\n' % (host, command))
             stdin, stdout, stderr = client.exec_command(command)  # @UnusedVariable
             if command.startswith('sudo'):
                 stdin.write('%s\n' % password)
@@ -100,15 +101,16 @@ def ssh_run(host, login, password, commands):
             result = stdout.read().decode("utf-8")
             error = stderr.read().decode("utf-8")
             if result:
-                sys.stdout.write(result + '\n')
+                if verbose: sys.stdout.write(result + '\n')
             if error:
-                sys.stderr.write(error + '\n')
+                if verbose: sys.stderr.write(error + '\n')
     except:
         sys.stdout.write('Failed to establish ssh connection to host "%s"\n' % host)
         sys.stdout.write('due to the following exception:\n')
         traceback.print_exc(file=sys.stdout)
     finally:
         client.close()
+    return result
    
    
 def get_galera_cnf_content(node_ip, node_name, cluster_ips):
@@ -139,6 +141,42 @@ def get_galera_cnf_content(node_ip, node_name, cluster_ips):
     template = template.replace('%NODE_NAME%', node_name)
     content = '\n'.join(line.strip() for line in template.splitlines())
     return content     
+
+
+def check_installation(node):
+    '''
+    This function checks whether galera cluster is installed on the node pointed to by the supplied node object
+    '''
+    _, ip, login, password = parse_node(node)
+    output = ssh_run(ip, login, password, ['sudo -S which mysqld'], verbose=False)
+    output = ''.join(output.splitlines()).strip()
+    return ip, 'mysqld' in output
+
+
+def check_deamon(node):
+    '''
+    This function checks whether mysql is started on the node pointed to by the supplied node object
+    '''
+    _, ip, login, password = parse_node(node)
+    output = ssh_run(ip, login, password, ['sudo -S service --status-all | grep mysql'], verbose=False)
+    output = ''.join(output.splitlines()).strip()
+    return ip, output=='[ + ]  mysql'
+
+
+def get_cluster_size(node):
+    '''
+    this function returns the cluster size from the node pointed to by the supplied node object
+    '''
+    _, ip, login, password = parse_node(node)
+    commands = ['''sudo -S mysql -u root -e "SHOW STATUS LIKE 'wsrep_cluster_size'" | grep wsrep_cluster_size''']
+    output = ssh_run(ip, login, password, commands, verbose=False)
+    tmp = output.split()
+    if len(tmp) > 1:
+        cluster_size = tmp[1]
+    else:
+        cluster_size = '0'
+    return cluster_size
+
 
 #===============================================================================
 # Command Functions
@@ -193,6 +231,7 @@ def command_stop(nodes):
 
 
 def command_install(nodes):
+    #TODO: add a check to see if the node has mysql installed and act accordingly
     cluster_ips = [node['ip'] for node in nodes]
     def install_cluster_node(node):
         sys.stdout.write('trying to ssh to %s\n' % str(node['ip']))
@@ -221,6 +260,9 @@ def command_install(nodes):
 
 
 def command_status(nodes):
+    args_list = [(node, ) for node in nodes]
+    installations = dict(execute_parrallel(check_installation, args_list))
+    deamons = dict(execute_parrallel(check_deamon, args_list))
     sys.stdout.write('\n')
     for ith, node in enumerate(nodes):
         header = 'Node %s' % (ith + 1)
@@ -228,9 +270,11 @@ def command_status(nodes):
         sys.stdout.write('%s\n' % ('-'*len(header)))
         sys.stdout.write('  label: %s\n' % node['label'])
         sys.stdout.write('     ip: %s\n' % node['ip'])
-        sys.stdout.write(' galera: %s\n' % 'installed') #TODO: implement
-        sys.stdout.write(' deamon: %s\n' % 'stopped') #TODO: implement
+        sys.stdout.write(' galera: %s\n' % ('installed' if installations[node['ip']] else 'not installed')) 
+        sys.stdout.write(' deamon: %s\n' % ('started' if deamons[node['ip']] else 'stopped'))
         sys.stdout.write('\n')
+    sys.stdout.write('Cluster Size : %s\n' % get_cluster_size(nodes[0]))
+    sys.stdout.write('------------\n\n')
 
 
 def command_server(nodes):
