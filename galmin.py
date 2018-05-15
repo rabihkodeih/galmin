@@ -221,17 +221,28 @@ def command_ping(nodes):
     
 
 def command_start(nodes):
-    #TODO: implement
-    sys.stdout.write('start command\n')
+    primary_node = nodes[0]
+    _, ip, login, pwd = parse_node(primary_node)
+    ssh_run(ip, login, pwd, ['sudo -S galera_new_cluster'])
+    secondary_nodes = nodes[1:]
+    def join_cluster(node):
+        _, ip, login, pwd = parse_node(node)
+        commands = ['sudo -S systemctl start mysql']
+        ssh_run(ip, login, pwd, commands)
+    args_list = [(node,) for node in secondary_nodes]
+    execute_parrallel(join_cluster, args_list)
 
 
 def command_stop(nodes):
-    #TODO: implement
-    sys.stdout.write('stop command\n')
-
+    def stop_deamon(node):
+        _, ip, login, password = parse_node(node)
+        commands = ['sudo -S systemctl stop mysql']
+        ssh_run(ip, login, password, commands)
+    args_list = [(node,) for node in nodes]
+    execute_parrallel(stop_deamon, args_list)
+    
 
 def command_install(nodes):
-    #TODO: add a check to see if the node has mysql installed and act accordingly
     cluster_ips = [node['ip'] for node in nodes]
     def install_cluster_node(node):
         sys.stdout.write('trying to ssh to %s\n' % str(node['ip']))
@@ -255,8 +266,14 @@ def command_install(nodes):
         ]
         ssh_run(ip, login, password, commands)
         return 0
-    args_list = [(node, ) for node in nodes]
-    execute_parrallel(install_cluster_node, args_list)
+    args_list = [(node,) for node in nodes]
+    installations = dict(execute_parrallel(check_installation, args_list))
+    installed_nodes = [node for node in nodes if installations[node['ip']]]
+    uninstalled_nodes = [(node,) for node in nodes if not installations[node['ip']]]
+    for node in installed_nodes:
+        label, ip, _, _ = parse_node(node)
+        sys.stdout.write('Galera allready installed on node "%s" (%s), skipping installation\n' % (label, ip))
+    execute_parrallel(install_cluster_node, uninstalled_nodes)
 
 
 def command_status(nodes):
@@ -334,6 +351,7 @@ if __name__ == '__main__':
         parser.print_help(sys.stdout)
     
     
+    #TODO: add db user name and password in each node (currently set to root/"" by default isntallation process)
     
     #TODO: add to documentation that :
         #  servers used for the test are ubuntu desktops 14.04
