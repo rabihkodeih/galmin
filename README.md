@@ -82,8 +82,7 @@ and if all is OK, you should see something like:
     "cluster_node_2" (127.0.0.1) is up
     "cluster_node_3" (127.0.0.1) is up
 
-you may want at this stage to ping each node from each other node and from the machine
-you have installed the management tool.
+you may want at this stage to ping each node from each other node.
 
 Now we are ready to start the installation process.
 
