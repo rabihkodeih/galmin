@@ -234,13 +234,17 @@ def command_start(nodes):
 
 
 def command_stop(nodes):
-    def stop_deamon(node):
-        _, ip, login, password = parse_node(node)
+    secondary_nodes = nodes[1:]
+    def join_cluster(node):
+        _, ip, login, pwd = parse_node(node)
         commands = ['sudo -S systemctl stop mysql']
-        ssh_run(ip, login, password, commands)
-    args_list = [(node,) for node in nodes]
-    execute_parrallel(stop_deamon, args_list)
-    
+        ssh_run(ip, login, pwd, commands)
+    args_list = [(node,) for node in secondary_nodes]
+    execute_parrallel(join_cluster, args_list)    
+    primary_node = nodes[0]
+    _, ip, login, pwd = parse_node(primary_node)
+    ssh_run(ip, login, pwd, ['sudo -S systemctl stop mysql'])
+
 
 def command_install(nodes):
     cluster_ips = [node['ip'] for node in nodes]
@@ -254,7 +258,7 @@ def command_install(nodes):
             'sudo -S apt update -y',
             "sudo -S sh -c 'apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server rsync'",
             'sudo -S echo \'%s\' > ~/galera.tmp' % config_file_content,
-            'sudo -S mv galera.tmp /etc/mysql/conf.d/galera.cnf',
+            'sudo -S mv ~/galera.tmp /etc/mysql/conf.d/galera.cnf',
             'sudo -S ufw enable',
             'sudo -S ufw allow ssh',
             'sudo -S ufw allow 3306/tcp',
@@ -294,6 +298,17 @@ def command_status(nodes):
     sys.stdout.write('------------\n\n')
 
 
+def command_bootstrap(nodes):
+    primary_node = nodes[0]
+    _, ip, login, pwd = parse_node(primary_node)
+    output = ssh_run(ip, login, pwd, ['sudo -S cat /var/lib/mysql/grastate.dat'], verbose=False)
+    output = output.replace('safe_to_bootstrap: 0', 'safe_to_bootstrap: 1')
+    commands = ['sudo -S echo \'%s\' > ~/grastate.tmp' % output,
+                'sudo -S mv ~/grastate.tmp /var/lib/mysql/grastate.dat',
+                'sudo -S chmod 777 /var/lib/mysql/grastate.dat']
+    ssh_run(ip, login, pwd, commands, verbose=False)
+    
+
 def command_server(nodes):
     #TODO: implement
     sys.stdout.write('server command\n')
@@ -311,7 +326,8 @@ if __name__ == '__main__':
     epilog_message = '''
     Welcome to the Galera cluster admin command line tool. Before using this tool, use the "--init" command 
     to create a default config file named "cluster.config" then edit it to specify your cluster nodes.
-    Once a cluster has been installed and started, use the command "--server" to
+    Once a cluster has been installed, run the "--bootstrap" command to mark the first cluster node as safe
+    to bootstrap and cluster from. After starting the cluster, use the command "--server" to
     start a local monitoring server on "http://localhost:8080" which can then be stopped using Ctrl-C.
     '''
     parser = ArgumentParser(description='Galera Cluster Admin Tool', epilog=epilog_message)
@@ -321,6 +337,7 @@ if __name__ == '__main__':
     parser.add_argument('--install', action='store_true', help='Installs Galera cluster on the nodes specified in the config file')
     parser.add_argument('--start', action='store_true', help='Starts the cluster')
     parser.add_argument('--stop', action='store_true', help='Stops the cluster')
+    parser.add_argument('--bootstrap', action='store_true', help='Marks the first cluster node as safe to bootstrap from')
     parser.add_argument('--status', action='store_true', help='Shows cluster status report')
     parser.add_argument('--server', action='store_true', help='Starts a local monitoring server on "http://localhost:8080"')
     
@@ -341,6 +358,9 @@ if __name__ == '__main__':
     elif args.stop:
         nodes = parse_nodes()
         execute(command_stop, nodes)
+    elif args.bootstrap:
+        nodes = parse_nodes()
+        execute(command_bootstrap, nodes)
     elif args.status:
         nodes = parse_nodes()
         execute(command_status, nodes)
