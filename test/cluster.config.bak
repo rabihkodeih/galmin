@@ -1,0 +1,15 @@
+label:cluster_node_1
+ip:192.168.1.91
+login:rabih
+password:Abcd1234
+
+label:cluster_node_2
+ip:192.168.1.92
+login:rabih
+password:Abcd1234
+
+label:cluster_node_3
+ip:192.168.1.93
+login:rabih
+password:Abcd1234
+
